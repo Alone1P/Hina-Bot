@@ -1,2 +1,2 @@
 # Hina-Bot
-Whatsapp Bot
+Telegram Bot
