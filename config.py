@@ -13,7 +13,7 @@ API_IMAGE_URL = "https://api.remove.bg/v1.0/removebg"  # رابط افتراضي
 
 # معلومات المالك
 OWNER_ID = 7734153571  # معرف المالك الحقيقي
-OWNER_USERNAME = "Alone1P"
+OWNER_USERNAME = "Alone_1P"
 
 # معلومات السيرفر
 SERVER_HOST = "35.209.34.130"

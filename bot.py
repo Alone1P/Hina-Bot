@@ -45,6 +45,9 @@ class HinaBot:
         self.command_stats = {}
         self.user_last_command = {}
         self.shortcuts = {}
+        self.session_command_count = 0  # عداد الأوامر في الجلسة الحالية
+        self.session_start_time = datetime.now()  # وقت بداية الجلسة
+        self.temp_data = {}  # بيانات مؤقتة للجلسة
         
         # تهيئة نظام المراقبة الذكي
         self.smart_monitor = SmartMonitoring(self)
@@ -65,6 +68,52 @@ class HinaBot:
             pass
         except Exception as e:
             logger.error(f"خطأ في تحميل الاختصارات: {e}")
+    
+    def refresh_session(self):
+        """تجديد الجلسة وتنظيف البيانات المؤقتة"""
+        try:
+            # تنظيف البيانات المؤقتة
+            self.temp_data.clear()
+            
+            # إعادة تعيين عداد الأوامر
+            self.session_command_count = 0
+            self.session_start_time = datetime.now()
+            
+            # تنظيف ذاكرة الأوامر القديمة (الاحتفاظ بآخر 50 أمر فقط)
+            if len(self.command_stats) > 50:
+                # ترتيب حسب الوقت والاحتفاظ بالأحدث
+                sorted_commands = sorted(self.command_stats.items(), 
+                                       key=lambda x: x[1].get('last_used', datetime.min))
+                # الاحتفاظ بآخر 50 أمر
+                self.command_stats = dict(sorted_commands[-50:])
+            
+            # تنظيف بيانات المستخدمين القديمة (أكثر من ساعة)
+            current_time = datetime.now()
+            users_to_remove = []
+            for user_id, last_time in self.user_last_command.items():
+                if isinstance(last_time, datetime) and (current_time - last_time).total_seconds() > 3600:
+                    users_to_remove.append(user_id)
+            
+            for user_id in users_to_remove:
+                del self.user_last_command[user_id]
+            
+            # تشغيل garbage collector لتنظيف الذاكرة
+            import gc
+            gc.collect()
+            
+            logger.info("تم تجديد الجلسة وتنظيف البيانات المؤقتة")
+            return True
+            
+        except Exception as e:
+            logger.error(f"خطأ في تجديد الجلسة: {e}")
+            return False
+    
+    def check_auto_refresh(self):
+        """فحص الحاجة لتجديد الجلسة تلقائياً"""
+        if self.session_command_count >= 200:
+            self.refresh_session()
+            return True
+        return False
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر البدء"""
@@ -116,6 +165,47 @@ class HinaBot:
         # تسجيل النشاط
         db.update_user_activity(user.id)
         await self.log_command_usage(update, context, 'start')
+    
+    async def session_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """أمر تجديد الجلسة"""
+        user_id = update.effective_user.id
+        
+        # التحقق من صلاحيات المالك
+        if user_id != config.OWNER_ID:
+            await update.message.reply_text("❌ هذا الأمر متاح للمالك فقط")
+            return
+        
+        # معلومات الجلسة الحالية
+        session_duration = datetime.now() - self.session_start_time
+        hours = int(session_duration.total_seconds() // 3600)
+        minutes = int((session_duration.total_seconds() % 3600) // 60)
+        old_command_count = self.session_command_count
+        
+        # تجديد الجلسة
+        success = self.refresh_session()
+        
+        if success:
+            session_text = f"""
+🔄 **تم تجديد الجلسة بنجاح**
+
+📊 **إحصائيات الجلسة السابقة:**
+• عدد الأوامر: {old_command_count}
+• مدة الجلسة: {hours} ساعة و {minutes} دقيقة
+• البيانات المؤقتة: تم تنظيفها
+• الذاكرة: تم تحسينها
+
+✅ **الجلسة الجديدة:**
+• عداد الأوامر: 0
+• وقت البداية: {datetime.now().strftime('%H:%M:%S')}
+• الحالة: نشطة
+
+🚀 **البوت الآن أكثر سلاسة وسرعة!**
+            """
+        else:
+            session_text = "❌ حدث خطأ أثناء تجديد الجلسة"
+        
+        await update.message.reply_text(session_text, parse_mode='Markdown')
+        await self.log_command_usage(update, context, 'session')
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر المساعدة"""
@@ -606,6 +696,13 @@ class HinaBot:
             # تحديث إحصائيات الأوامر
             self.command_stats[command] = self.command_stats.get(command, 0) + 1
             
+            # زيادة عداد أوامر الجلسة
+            self.session_command_count += 1
+            
+            # فحص الحاجة لتجديد الجلسة تلقائياً
+            if self.check_auto_refresh():
+                logger.info(f"تم تجديد الجلسة تلقائياً بعد {self.session_command_count} أمر")
+            
         except Exception as e:
             logger.error(f"خطأ في تسجيل استخدام الأمر: {e}")
     
@@ -702,6 +799,9 @@ class HinaBot:
             '/بنج': self.ping_command,
             'بنج': self.ping_command,
             '.بنج': self.ping_command,
+            '/جلسة': self.session_command,
+            'جلسة': self.session_command,
+            '.جلسة': self.session_command,
             '/سيرفر': self.server_info_command,
             'سيرفر': self.server_info_command,
             '.سيرفر': self.server_info_command,
@@ -777,6 +877,7 @@ class HinaBot:
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
         self.application.add_handler(CommandHandler("ping", self.ping_command))
+        self.application.add_handler(CommandHandler("session", self.session_command))
         self.application.add_handler(CommandHandler("server", self.server_info_command))
         self.application.add_handler(CommandHandler("stats", self.bot_stats_command))
         self.application.add_handler(CommandHandler("dice", self.dice_command))
