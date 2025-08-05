@@ -115,16 +115,18 @@ class HinaBot:
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر المساعدة"""
-        text, photo_url = get_commands_menu(0)
+        text, photo_url, reply_markup = get_commands_menu(0, 1)
         
         try:
             await update.message.reply_photo(
                 photo=photo_url,
                 caption=text,
+                reply_markup=reply_markup,
                 parse_mode='HTML'
             )
-        except:
-            await update.message.reply_text(text, parse_mode='HTML')
+        except Exception as e:
+            logger.error(f"خطأ في إرسال الصورة: {e}")
+            await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
         
         await self.log_command_usage(update, context, 'help')
     
@@ -588,19 +590,47 @@ class HinaBot:
         logger.info("تم إعداد قائمة أوامر البوت")
     
     async def commands_menu_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE, section: int):
-        """معالج قوائم الأوامر"""
-        text, photo_url = get_commands_menu(section)
-        
+        """معالج أوامر القوائم مع الصور والأزرار"""
         try:
+            text, photo_url, reply_markup = get_commands_menu(section, 1)
+            
             await update.message.reply_photo(
                 photo=photo_url,
                 caption=text,
+                reply_markup=reply_markup,
                 parse_mode='HTML'
             )
-        except:
-            await update.message.reply_text(text, parse_mode='HTML')
+        except Exception as e:
+            logger.error(f"خطأ في إرسال الصورة: {e}")
+            text, photo_url, reply_markup = get_commands_menu(section, 1)
+            await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
         
         await self.log_command_usage(update, context, f'menu_{section}')
+
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالج أزرار التنقل"""
+        try:
+            query = update.callback_query
+            await query.answer()
+            
+            # تحليل البيانات
+            data = query.data
+            if data.startswith('menu_'):
+                parts = data.split('_')
+                section = int(parts[1])
+                page = int(parts[2])
+                
+                text, photo_url, reply_markup = get_commands_menu(section, page)
+                
+                # تحديث الرسالة
+                await query.edit_message_caption(
+                    caption=text,
+                    reply_markup=reply_markup,
+                    parse_mode='HTML'
+                )
+                
+        except Exception as e:
+            logger.error(f"خطأ في معالج الأزرار: {e}")
     
     async def handle_arabic_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالج الأوامر العربية"""
@@ -718,6 +748,10 @@ class HinaBot:
         self.application.add_handler(CommandHandler("weather", self.weather_command))
         self.application.add_handler(CommandHandler("translate", self.translate_command))
         self.application.add_handler(CommandHandler("calc", self.calculator_command))
+        
+        # معالج الأزرار
+        from telegram.ext import CallbackQueryHandler
+        self.application.add_handler(CallbackQueryHandler(self.button_callback))
         
         # معالج الرسائل للأوامر العربية
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_arabic_commands))
