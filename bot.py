@@ -21,10 +21,11 @@ from telegram.ext import (
 
 # استيراد الوحدات المحلية
 import config
-from database import db
-from monitoring import monitor
-import web_monitor
+from database import DatabaseManager
+from monitoring import SystemMonitor
+from web_monitor import WebMonitor
 from commands_menu import get_commands_menu
+from smart_monitoring import SmartMonitoring
 
 # إعداد نظام السجلات
 logging.basicConfig(
@@ -44,6 +45,9 @@ class HinaBot:
         self.command_stats = {}
         self.user_last_command = {}
         self.shortcuts = {}
+        
+        # تهيئة نظام المراقبة الذكي
+        self.smart_monitor = SmartMonitoring(self)
         
         # تحميل الاختصارات من قاعدة البيانات
         self.load_shortcuts()
@@ -761,6 +765,13 @@ class HinaBot:
         
         logger.info("🚀 تم بدء تشغيل بوت Hina")
         logger.info(f"🌐 واجهة المراقبة متاحة على: http://{config.SERVER_HOST}:5000")
+        
+        # بدء نظام المراقبة الذكي في خيط منفصل
+        monitoring_thread = threading.Thread(
+            target=lambda: asyncio.run(self.smart_monitor.start_monitoring()), 
+            daemon=True
+        )
+        monitoring_thread.start()
         
         # تشغيل البوت
         self.application.run_polling(drop_pending_updates=True)

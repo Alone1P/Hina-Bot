@@ -356,6 +356,34 @@ class DatabaseManager:
         backup_thread = threading.Thread(target=backup_worker, daemon=True)
         backup_thread.start()
         logging.info("تم بدء النسخ الاحتياطي التلقائي")
+    
+    def get_active_users(self, days=7):
+        """الحصول على المستخدمين النشطين في فترة معينة"""
+        try:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT user_id, username, first_name, last_activity
+                FROM users 
+                WHERE last_activity > ?
+                ORDER BY last_activity DESC
+            """, (cutoff_date,))
+            
+            users = []
+            for row in cursor.fetchall():
+                users.append({
+                    'user_id': row[0],
+                    'username': row[1],
+                    'first_name': row[2],
+                    'last_activity': row[3]
+                })
+            
+            return users
+            
+        except Exception as e:
+            logger.error(f"خطأ في الحصول على المستخدمين النشطين: {e}")
+            return []
 
 # إنشاء مثيل قاعدة البيانات
 db = DatabaseManager()
