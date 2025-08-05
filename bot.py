@@ -13,7 +13,7 @@ import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from telegram import Update, Bot, BotCommand
+from telegram import Update, Bot, BotCommand, InputMediaPhoto
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, 
     filters, ContextTypes, CallbackContext
@@ -454,6 +454,41 @@ class HinaBot:
         
         await update.message.reply_text(weather_text, parse_mode='Markdown')
         await self.log_command_usage(update, context, 'weather')
+    
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالج الأزرار التفاعلية"""
+        query = update.callback_query
+        await query.answer()
+        
+        try:
+            # تحليل البيانات المرسلة من الزر
+            data = query.data
+            
+            if data.startswith("menu_"):
+                # تحليل البيانات: menu_section_page
+                parts = data.split("_")
+                if len(parts) >= 3:
+                    section = int(parts[1])
+                    page = int(parts[2])
+                    
+                    # الحصول على قائمة الأوامر
+                    text, photo_url, reply_markup = get_commands_menu(section, page)
+                    
+                    # تحديث الرسالة
+                    if photo_url:
+                        await query.edit_message_media(
+                            media=InputMediaPhoto(media=photo_url, caption=text),
+                            reply_markup=reply_markup
+                        )
+                    else:
+                        await query.edit_message_text(
+                            text=text,
+                            reply_markup=reply_markup
+                        )
+                        
+        except Exception as e:
+            logger.error(f"خطأ في معالج الأزرار: {e}")
+            await query.edit_message_text("❌ حدث خطأ في معالجة الزر")
     
     async def translate_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """أمر الترجمة"""
