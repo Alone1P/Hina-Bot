@@ -1,0 +1,14 @@
+python-telegram-bot
+requests
+aiohttp
+schedule
+pytz
+deep-translator
+wikipedia
+Pillow
+qrcode
+python-barcode
+cryptography
+flask
+psutil
+

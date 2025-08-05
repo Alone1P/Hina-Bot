@@ -1,0 +1,43 @@
+{
+  "last_update": "2025-08-05T17:38:39.050381",
+  "system": {
+    "timestamp": "2025-08-05T17:38:38.624183",
+    "cpu_usage": 5.3,
+    "memory_usage": 24.8,
+    "memory_total": 4133236736,
+    "memory_available": 3108618240,
+    "disk_usage": 19.5,
+    "disk_total": 42265882624,
+    "disk_free": 34011029504,
+    "network_sent": 36186266,
+    "network_recv": 34555134,
+    "process_count": 130,
+    "uptime_seconds": 53493.6241812706,
+    "uptime_formatted": "0د 14س 51ق",
+    "response_time": 0.348785400390625,
+    "internet_connected": true
+  },
+  "bot": {
+    "status": "online",
+    "response_time": 0.348785400390625,
+    "uptime": "0د 14س 51ق"
+  },
+  "database": {
+    "total_users": 0,
+    "active_users": 0,
+    "total_groups": 0,
+    "total_commands": 0,
+    "last_system_stats": [
+      2,
+      "2025-08-05 21:38:39",
+      5.3,
+      24.8,
+      19.5,
+      0.348785400390625,
+      0,
+      0,
+      0
+    ],
+    "database_size": 32768
+  }
+}

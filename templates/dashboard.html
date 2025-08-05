@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مراقبة بوت Hina</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+        
+        .status-online { background-color: #4CAF50; }
+        .status-warning { background-color: #FF9800; }
+        .status-offline { background-color: #F44336; }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stat-label {
+            color: #666;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-normal { background-color: #4CAF50; }
+        .progress-warning { background-color: #FF9800; }
+        .progress-danger { background-color: #F44336; }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: #5a6fd8;
+            transform: scale(1.1);
+        }
+        
+        .last-update {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 مراقبة بوت Hina</h1>
+            <p>حالة البوت: <span id="bot-status">جاري التحميل...</span><span id="status-indicator" class="status-indicator"></span></p>
+        </div>
+        
+        <div class="dashboard">
+            <!-- معلومات البوت -->
+            <div class="card">
+                <h3>📊 معلومات البوت</h3>
+                <div class="stat-item">
+                    <span class="stat-label">الحالة:</span>
+                    <span class="stat-value" id="bot-status-text">غير معروف</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">سرعة الاستجابة:</span>
+                    <span class="stat-value" id="response-time">-- ثانية</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">وقت التشغيل:</span>
+                    <span class="stat-value" id="uptime">غير معروف</span>
+                </div>
+            </div>
+            
+            <!-- إحصائيات النظام -->
+            <div class="card">
+                <h3>💻 إحصائيات النظام</h3>
+                <div class="stat-item">
+                    <span class="stat-label">استخدام المعالج:</span>
+                    <span class="stat-value" id="cpu-usage">--%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cpu-progress"></div>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">استخدام الذاكرة:</span>
+                    <span class="stat-value" id="memory-usage">--%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="memory-progress"></div>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">استخدام القرص:</span>
+                    <span class="stat-value" id="disk-usage">--%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="disk-progress"></div>
+                </div>
+            </div>
+            
+            <!-- إحصائيات المستخدمين -->
+            <div class="card">
+                <h3>👥 إحصائيات المستخدمين</h3>
+                <div class="stat-item">
+                    <span class="stat-label">إجمالي المستخدمين:</span>
+                    <span class="stat-value" id="total-users">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">المستخدمون النشطون:</span>
+                    <span class="stat-value" id="active-users">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">إجمالي المجموعات:</span>
+                    <span class="stat-value" id="total-groups">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">إجمالي الأوامر:</span>
+                    <span class="stat-value" id="total-commands">--</span>
+                </div>
+            </div>
+            
+            <!-- معلومات قاعدة البيانات -->
+            <div class="card">
+                <h3>🗄️ قاعدة البيانات</h3>
+                <div class="stat-item">
+                    <span class="stat-label">حجم قاعدة البيانات:</span>
+                    <span class="stat-value" id="db-size">-- KB</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">آخر نسخة احتياطية:</span>
+                    <span class="stat-value" id="last-backup">غير معروف</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="last-update">
+            آخر تحديث: <span id="last-update">--</span>
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="refreshData()" title="تحديث البيانات">🔄</button>
+    
+    <script>
+        function updateProgressBar(elementId, value, maxValue = 100) {
+            const element = document.getElementById(elementId);
+            const percentage = Math.min((value / maxValue) * 100, 100);
+            element.style.width = percentage + '%';
+            
+            // تغيير اللون حسب القيمة
+            element.className = 'progress-fill ';
+            if (percentage < 60) {
+                element.className += 'progress-normal';
+            } else if (percentage < 80) {
+                element.className += 'progress-warning';
+            } else {
+                element.className += 'progress-danger';
+            }
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function updateDashboard(data) {
+            // تحديث معلومات البوت
+            const botStatus = data.bot.status;
+            document.getElementById('bot-status-text').textContent = 
+                botStatus === 'online' ? 'متصل' : 'غير متصل';
+            
+            const statusIndicator = document.getElementById('status-indicator');
+            statusIndicator.className = 'status-indicator status-' + 
+                (botStatus === 'online' ? 'online' : 'offline');
+            
+            document.getElementById('response-time').textContent = 
+                data.bot.response_time > 0 ? data.bot.response_time.toFixed(2) + ' ثانية' : 'غير متاح';
+            
+            document.getElementById('uptime').textContent = data.bot.uptime || 'غير معروف';
+            
+            // تحديث إحصائيات النظام
+            if (data.system) {
+                const cpu = data.system.cpu_usage || 0;
+                const memory = data.system.memory_usage || 0;
+                const disk = data.system.disk_usage || 0;
+                
+                document.getElementById('cpu-usage').textContent = cpu.toFixed(1) + '%';
+                document.getElementById('memory-usage').textContent = memory.toFixed(1) + '%';
+                document.getElementById('disk-usage').textContent = disk.toFixed(1) + '%';
+                
+                updateProgressBar('cpu-progress', cpu);
+                updateProgressBar('memory-progress', memory);
+                updateProgressBar('disk-progress', disk);
+            }
+            
+            // تحديث إحصائيات المستخدمين
+            if (data.database) {
+                document.getElementById('total-users').textContent = data.database.total_users || 0;
+                document.getElementById('active-users').textContent = data.database.active_users || 0;
+                document.getElementById('total-groups').textContent = data.database.total_groups || 0;
+                document.getElementById('total-commands').textContent = data.database.total_commands || 0;
+                document.getElementById('db-size').textContent = formatBytes(data.database.database_size || 0);
+            }
+            
+            // تحديث وقت آخر تحديث
+            document.getElementById('last-update').textContent = 
+                new Date(data.last_update).toLocaleString('ar-SA');
+        }
+        
+        function refreshData() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => updateDashboard(data))
+                .catch(error => console.error('خطأ في تحميل البيانات:', error));
+        }
+        
+        // تحديث البيانات كل 30 ثانية
+        setInterval(refreshData, 30000);
+        
+        // تحميل البيانات عند تحميل الصفحة
+        refreshData();
+    </script>
+</body>
+</html>
